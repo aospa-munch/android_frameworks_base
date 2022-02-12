@@ -81,4 +81,7 @@
         <item>Don\'t show this icon</item>
     </string-array>
 
+    <!-- Face Unlock -->
+    <string name="face_unlock_recognizing">Recognizing face...</string>
+
 </resources>
