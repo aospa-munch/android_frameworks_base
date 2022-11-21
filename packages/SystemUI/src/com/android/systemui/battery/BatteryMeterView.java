@@ -15,6 +15,7 @@
  */
 package com.android.systemui.battery;
 
+import static android.provider.Settings.System.SHOW_BATTERY_ICON;
 import static android.provider.Settings.System.SHOW_BATTERY_PERCENT;
 
 import static com.android.systemui.DejankUtils.whitelistIpcs;
@@ -37,6 +38,7 @@ import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -116,13 +118,17 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
         mBatteryIconView = new ImageView(context);
         mBatteryIconView.setImageDrawable(mDrawable);
+        int marginStart = getResources().getDimensionPixelSize(R.dimen.battery_margin_start);
+        int marginEnd = getResources().getDimensionPixelSize(R.dimen.battery_margin_end);
         final MarginLayoutParams mlp = new MarginLayoutParams(
-                getResources().getDimensionPixelSize(R.dimen.status_bar_battery_icon_width),
+                getResources().getDimensionPixelSize(R.dimen.status_bar_battery_icon_width)
+                    + marginStart + marginEnd,
                 getResources().getDimensionPixelSize(R.dimen.status_bar_battery_icon_height));
-        mlp.setMargins(0, 0, 0,
+        mlp.setMargins(marginStart, 0, marginEnd,
                 getResources().getDimensionPixelOffset(R.dimen.battery_margin_bottom));
         addView(mBatteryIconView, mlp);
 
+        updateShowIcon();
         updateShowPercent();
         mDualToneHandler = new DualToneHandler(context);
         // Init to not dark at all.
@@ -269,6 +275,11 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         }
 
         String percentText = NumberFormat.getPercentInstance().format(mLevel / 100f);
+        if (mCharging && mBatteryIconView.getVisibility() == View.GONE) {
+            // Use the high voltage symbol ⚡ (u26A1 unicode) but prevent the system
+            // from loading its emoji colored variant using the uFE0E flag
+            percentText += "\u26A1\uFE0E";
+        }
         // Setting text actually triggers a layout pass (because the text view is set to
         // wrap_content width and TextView always relayouts for this). Avoid needless
         // relayout if the text didn't actually change.
@@ -312,6 +323,13 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                 mBatteryPercentView = null;
             }
         }
+    }
+
+    void updateShowIcon() {
+        mBatteryIconView.setVisibility(Settings.System.getIntForUser(
+                getContext().getContentResolver(), SHOW_BATTERY_ICON, 1,
+                UserHandle.USER_CURRENT) == 1 ? View.VISIBLE : View.GONE);
+        updatePercentText();
     }
 
     private Drawable getUnknownStateDrawable() {
